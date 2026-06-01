@@ -1,0 +1,11 @@
+torch
+torchvision
+transformers>=4.40
+timm
+scipy
+pycocotools
+torchmetrics>=1.0
+fiftyone
+tensorboard
+matplotlib
+pillow
