@@ -1,8 +1,10 @@
 """Шаги 2-4. Быстрый fine-tuning DETR на COCO-subset с TensorBoard и trace."""
 import argparse
 import glob
+import importlib.util
 import os
 import shutil
+import sys
 import time
 
 
@@ -18,6 +20,14 @@ from dataset import CocoDetection, build_collate
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LR = 1e-4
 LR_BACKBONE = 1e-5
+
+
+def check_dependencies():
+    if importlib.util.find_spec("timm") is None:
+        raise RuntimeError(
+            "Не найден обязательный пакет timm для DETR. Установите зависимости "
+            f"в активное окружение:\n{sys.executable} -m pip install -r "
+            "../requirements.txt")
 
 
 def make_loader(processor, batch_size, workers, max_samples):
@@ -87,6 +97,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    check_dependencies()
     amp = DEVICE == "cuda" and not args.no_amp
     if DEVICE == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True

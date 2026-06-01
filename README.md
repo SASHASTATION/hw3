@@ -3,8 +3,8 @@
 Две работы запускаются параллельно на одной Tesla A100:
 
 ```bash
-pip install -r detr-coco-detection/requirements.txt
-pip install -r synthetic-data-controlnet/requirements.txt
+python -m pip install -r detr-coco-detection/requirements.txt
+python -m pip install -r synthetic-data-controlnet/requirements.txt
 ./run_fast.sh
 ```
 

@@ -9,7 +9,7 @@ Fine-tuning предобученного **DETR (facebook/detr-resnet-50)** на
 
 ## Установка
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 Нужен GPU (подойдёт бесплатный Colab T4). Всё запускается из папки `src/`.
 
