@@ -4,6 +4,10 @@ DETR отдаёт боксы в нормализованном виде (cx,cy,w
 в пикселях. Поэтому и предсказания, и GT переводим в xyxy в координатах
 исходной картинки (orig_size), затем считаем метрику.
 """
+import os
+import glob
+import warnings
+warnings.filterwarnings("ignore")  # глушим безвредные UserWarning про meta-параметры
 import torch
 from torch.utils.data import DataLoader
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -13,6 +17,15 @@ from config import CLASSES
 from dataset import CocoDetection, build_collate
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def latest_checkpoint(folder="checkpoints"):
+    """Берём чекпойнт с самым большим номером эпохи (не важно, сколько прогнали)."""
+    files = glob.glob(os.path.join(folder, "detr_epoch*.pt"))
+    if not files:
+        raise FileNotFoundError(
+            f"В папке {folder}/ нет чекпойнтов. Сначала запустите train.py.")
+    return max(files, key=lambda f: int(f.split("epoch")[1].split(".")[0]))
 
 
 def load_model(ckpt):
@@ -30,7 +43,9 @@ def cxcywh_to_xyxy(boxes, size_hw):
 
 
 @torch.no_grad()
-def evaluate(ckpt="checkpoints/detr_epoch9.pt"):
+def evaluate(ckpt=None):
+    ckpt = ckpt or latest_checkpoint()
+    print("Использую чекпойнт:", ckpt)
     processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
     ds = CocoDetection("data/val/data", "data/val/labels.json", processor)
     dl = DataLoader(ds, batch_size=4, collate_fn=build_collate(processor))

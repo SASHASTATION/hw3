@@ -12,13 +12,15 @@ from torchvision.ops import box_iou
 from transformers import DetrImageProcessor
 
 from dataset import CocoDetection, build_collate
-from evaluate import load_model, cxcywh_to_xyxy
+from evaluate import load_model, cxcywh_to_xyxy, latest_checkpoint
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @torch.no_grad()
-def analyze(ckpt="checkpoints/detr_epoch9.pt", thr=0.5):
+def analyze(ckpt=None, thr=0.5):
+    ckpt = ckpt or latest_checkpoint()
+    print("Использую чекпойнт:", ckpt)
     processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
     ds = CocoDetection("data/val/data", "data/val/labels.json", processor)
     dl = DataLoader(ds, batch_size=4, collate_fn=build_collate(processor))

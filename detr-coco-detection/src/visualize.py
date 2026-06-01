@@ -9,13 +9,15 @@ from PIL import Image
 from transformers import DetrImageProcessor
 
 from config import CLASSES
-from evaluate import load_model
+from evaluate import load_model, latest_checkpoint
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @torch.no_grad()
-def visualize(ckpt="checkpoints/detr_epoch9.pt", img_dir="data/val/data", n=6, thr=0.7):
+def visualize(ckpt=None, img_dir="data/val/data", n=6, thr=0.7):
+    ckpt = ckpt or latest_checkpoint()
+    print("Использую чекпойнт:", ckpt)
     processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
     model = load_model(ckpt)
     os.makedirs("viz", exist_ok=True)
