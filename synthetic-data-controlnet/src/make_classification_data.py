@@ -4,8 +4,10 @@
 Структура на выходе:  clf_data/<класс>/<id>.jpg
 В конце печатает число примеров по классам — по нему видно «редкие» классы.
 """
+import argparse
 import os
 import json
+import shutil
 from collections import Counter
 from PIL import Image
 
@@ -13,7 +15,9 @@ from PIL import Image
 COCO_DIR = "../../detr-coco-detection/src/data/train"
 
 
-def build(coco_dir=COCO_DIR, out="clf_data", min_size=40):
+def build(coco_dir=COCO_DIR, out="clf_data", min_size=40, clean=False):
+    if clean and os.path.exists(out):
+        shutil.rmtree(out)
     img_dir = os.path.join(coco_dir, "data")
     anns = json.load(open(os.path.join(coco_dir, "labels.json")))
     images = {im["id"]: im["file_name"] for im in anns["images"]}
@@ -38,4 +42,10 @@ def build(coco_dir=COCO_DIR, out="clf_data", min_size=40):
 
 
 if __name__ == "__main__":
-    build()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--coco-dir", default=COCO_DIR)
+    ap.add_argument("--out", default="clf_data")
+    ap.add_argument("--min-size", type=int, default=40)
+    ap.add_argument("--clean", action="store_true")
+    args = ap.parse_args()
+    build(args.coco_dir, args.out, args.min_size, args.clean)

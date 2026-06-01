@@ -30,6 +30,9 @@ python download_data.py
 # 2-4) обучение + TensorBoard-логи + trace профайлера + чекпойнты
 python train.py
 
+# графики classification / bbox / GIoU loss -> viz/losses.png
+python plot_losses.py
+
 # 5) метрики mAP / mAP50 (по умолчанию берётся чекпойнт последней эпохи)
 python evaluate.py
 
@@ -43,16 +46,24 @@ python error_analysis.py
 tensorboard --logdir runs
 ```
 
+По умолчанию используется быстрый профиль для A100. Обе работы можно запустить
+параллельно из корня репозитория:
+```bash
+./run_fast.sh
+```
+
 ## Гиперпараметры
 | Параметр            | Значение            |
 | ------------------- | ------------------- |
 | Модель              | facebook/detr-resnet-50 |
-| Эпохи               | 10                  |
-| Batch size          | 4                   |
+| Эпохи               | 5                   |
+| Batch size          | 16                  |
 | LR (трансформер)    | 1e-4                |
 | LR (бэкбон)         | 1e-5                |
 | Optimizer           | AdamW (wd=1e-4)     |
-| Размер train / val  | ~1500 / ~400        |
+| Размер train / val  | 1000 / 200          |
+| Вход                 | shortest edge 640, longest edge 960 |
+| Ускорение            | AMP fp16, TF32      |
 
 Бэкбон учим меньшим LR, чтобы не «сломать» предобученные признаки ResNet —
 стандартный приём из оригинальной статьи DETR.
@@ -79,12 +90,14 @@ src/
   download_data.py    # шаг 1: скачать COCO-subset
   dataset.py          # COCO -> формат DETR
   train.py            # шаги 2-4: обучение, TensorBoard, профайлер, чекпойнты
+  plot_losses.py      # графики loss для отчёта
   evaluate.py         # шаг 5: mAP / mAP50
   visualize.py        # шаг 5: картинки с боксами
   error_analysis.py   # шаг 6: разбор ошибок
 runs/                 # логи TensorBoard + trace профайлера (появятся после train.py)
 checkpoints/          # веса по эпохам
 viz/                  # визуализации
+results/              # таблицы метрик и error analysis
 ```
 
 ## Наблюдения (заполнить своими)

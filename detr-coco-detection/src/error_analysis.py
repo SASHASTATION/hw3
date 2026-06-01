@@ -6,11 +6,14 @@
   IoU<0.5  (нет пары)       -> ошибка локализации / ложное срабатывание
   GT без пары               -> пропуск объекта (missed)
 """
+import argparse
+import os
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchvision.ops import box_iou
 from transformers import DetrImageProcessor
 
+from config import MODEL_NAME, PROCESSOR_SIZE
 from dataset import CocoDetection, build_collate
 from evaluate import load_model, cxcywh_to_xyxy, latest_checkpoint
 
@@ -18,19 +21,25 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @torch.no_grad()
-def analyze(ckpt=None, thr=0.5):
+def analyze(ckpt=None, thr=0.5, batch_size=16, workers=4, max_images=200):
     ckpt = ckpt or latest_checkpoint()
     print("Использую чекпойнт:", ckpt)
-    processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
+    processor = DetrImageProcessor.from_pretrained(MODEL_NAME, size=PROCESSOR_SIZE)
     ds = CocoDetection("data/val/data", "data/val/labels.json", processor)
-    dl = DataLoader(ds, batch_size=4, collate_fn=build_collate(processor))
+    if max_images and max_images < len(ds):
+        ds = Subset(ds, range(max_images))
+    dl = DataLoader(ds, batch_size=batch_size, collate_fn=build_collate(processor),
+                    num_workers=workers, pin_memory=DEVICE == "cuda",
+                    persistent_workers=workers > 0)
     model = load_model(ckpt)
     stats = {"correct": 0, "cls_error": 0, "loc_error": 0, "missed": 0}
 
     for batch in dl:
         pv = batch["pixel_values"].to(DEVICE)
         pm = batch["pixel_mask"].to(DEVICE)
-        out = model(pixel_values=pv, pixel_mask=pm)
+        with torch.autocast(device_type="cuda", dtype=torch.float16,
+                            enabled=DEVICE == "cuda"):
+            out = model(pixel_values=pv, pixel_mask=pm)
         sizes = torch.stack([t["orig_size"] for t in batch["labels"]]).to(DEVICE)
         results = processor.post_process_object_detection(out, target_sizes=sizes, threshold=thr)
 
@@ -62,8 +71,22 @@ def analyze(ckpt=None, thr=0.5):
     print("Error analysis:")
     for k, v in stats.items():
         print(f"  {k}: {v}")
+    os.makedirs("results", exist_ok=True)
+    with open("results/error_analysis.md", "w") as f:
+        f.write("| Тип результата | Количество |\n")
+        f.write("| --- | ---: |\n")
+        for name, count in stats.items():
+            f.write(f"| {name} | {count} |\n")
+    print("Таблица сохранена: results/error_analysis.md")
     return stats
 
 
 if __name__ == "__main__":
-    analyze()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--threshold", type=float, default=0.5)
+    ap.add_argument("--batch-size", type=int, default=16)
+    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--max-images", type=int, default=200)
+    args = ap.parse_args()
+    analyze(thr=args.threshold, batch_size=args.batch_size, workers=args.workers,
+            max_images=args.max_images)

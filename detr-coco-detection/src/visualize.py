@@ -8,7 +8,7 @@ import matplotlib.patches as patches
 from PIL import Image
 from transformers import DetrImageProcessor
 
-from config import CLASSES
+from config import CLASSES, MODEL_NAME, PROCESSOR_SIZE
 from evaluate import load_model, latest_checkpoint
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -18,14 +18,16 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 def visualize(ckpt=None, img_dir="data/val/data", n=6, thr=0.7):
     ckpt = ckpt or latest_checkpoint()
     print("Использую чекпойнт:", ckpt)
-    processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
+    processor = DetrImageProcessor.from_pretrained(MODEL_NAME, size=PROCESSOR_SIZE)
     model = load_model(ckpt)
     os.makedirs("viz", exist_ok=True)
 
     for f in sorted(os.listdir(img_dir))[:n]:
         img = Image.open(os.path.join(img_dir, f)).convert("RGB")
         enc = processor(images=img, return_tensors="pt").to(DEVICE)
-        out = model(**enc)
+        with torch.autocast(device_type="cuda", dtype=torch.float16,
+                            enabled=DEVICE == "cuda"):
+            out = model(**enc)
         size = torch.tensor([img.size[::-1]]).to(DEVICE)  # (h, w)
         res = processor.post_process_object_detection(out, target_sizes=size, threshold=thr)[0]
 

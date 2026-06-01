@@ -4,6 +4,7 @@
 fiftyone скачивает ТОЛЬКО картинки, где есть нужные классы, поэтому
 полный COCO (~20 ГБ) качать не нужно — уйдёт пара гигабайт.
 """
+import argparse
 import fiftyone as fo
 import fiftyone.zoo as foz
 
@@ -29,5 +30,9 @@ def download(split, max_samples, out_dir):
 
 
 if __name__ == "__main__":
-    download("train", 1500, "data/train")     # ~1500 картинок на обучение
-    download("validation", 400, "data/val")   # ~400 на валидацию
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--train-samples", type=int, default=1000)
+    ap.add_argument("--val-samples", type=int, default=200)
+    args = ap.parse_args()
+    download("train", args.train_samples, "data/train")
+    download("validation", args.val_samples, "data/val")
