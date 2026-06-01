@@ -152,7 +152,20 @@ def load_model(checkpoint):
         num_labels=len(CLASSES),
         ignore_mismatched_sizes=True,
     )
-    model.load_state_dict(torch.load(checkpoint, map_location="cpu"))
+    state_dict = torch.load(checkpoint, map_location="cpu")
+    legacy_prefix = "model.backbone.conv_encoder.model."
+    current_prefix = "model.backbone.model."
+    migrated = {
+        (
+            current_prefix + name[len(legacy_prefix) :]
+            if name.startswith(legacy_prefix)
+            else name
+        ): parameter
+        for name, parameter in state_dict.items()
+    }
+    if migrated.keys() != state_dict.keys():
+        print("Преобразованы legacy-ключи backbone из старой версии transformers.")
+    model.load_state_dict(migrated)
     return model.to(DEVICE)
 
 
