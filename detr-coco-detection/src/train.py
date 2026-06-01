@@ -18,7 +18,7 @@ from config import CLASSES
 from dataset import CocoDetection, build_collate
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-EPOCHS = 10
+EPOCHS = 2
 BATCH = 4
 LR = 1e-4
 LR_BACKBONE = 1e-5
